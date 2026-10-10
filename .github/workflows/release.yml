@@ -10,6 +10,8 @@ permissions:
 
 jobs:
   release:
+    # Signs with the maintainers' key, which forks don't have.
+    if: github.repository == 'barrydeen/haven'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v5

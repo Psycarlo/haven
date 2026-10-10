@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - master
+      - freehub
   pull_request:
 
 permissions:
