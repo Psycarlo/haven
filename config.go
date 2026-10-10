@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"runtime/debug"
 	"slices"
@@ -70,6 +71,7 @@ type Config struct {
 	BlastrTimeoutSeconds                 int                 `json:"blastr_timeout_seconds"`
 	S3Config                             *S3Config           `json:"s3_config"`
 	Relays                               map[string]bool     `json:"relays"`
+	TrustedProxies                       []*net.IPNet        `json:"trusted_proxies"`
 }
 
 const relaySoftware = "https://github.com/barrydeen/haven"
@@ -128,6 +130,7 @@ func loadConfig() Config {
 		BlastrTimeoutSeconds:                 getEnvInt("BLASTR_TIMEOUT_SECONDS", 5),
 		S3Config:                             getS3Config(),
 		Relays:                               getEnabledRelays(),
+		TrustedProxies:                       getTrustedProxies(),
 	}
 
 	// Relay owner is always whitelisted

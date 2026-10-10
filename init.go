@@ -123,7 +123,7 @@ func initRelays(ctx context.Context) {
 
 	privateRelay.RejectEvent = append(privateRelay.RejectEvent,
 		policies.RejectEventsWithBase64Media,
-		policies.EventIPRateLimiter(
+		eventIPRateLimiter(
 			privateRelayLimits.EventIPLimiterTokensPerInterval,
 			time.Minute*time.Duration(privateRelayLimits.EventIPLimiterInterval),
 			privateRelayLimits.EventIPLimiterMaxTokens,
@@ -132,7 +132,7 @@ func initRelays(ctx context.Context) {
 	)
 
 	privateRelay.RejectConnection = append(privateRelay.RejectConnection,
-		policies.ConnectionRateLimiter(
+		connectionRateLimiter(
 			privateRelayLimits.ConnectionRateLimiterTokensPerInterval,
 			time.Minute*time.Duration(privateRelayLimits.ConnectionRateLimiterInterval),
 			privateRelayLimits.ConnectionRateLimiterMaxTokens,
@@ -186,7 +186,7 @@ func initRelays(ctx context.Context) {
 
 	chatRelay.RejectEvent = append(chatRelay.RejectEvent,
 		policies.RejectEventsWithBase64Media,
-		policies.EventIPRateLimiter(
+		eventIPRateLimiter(
 			chatRelayLimits.EventIPLimiterTokensPerInterval,
 			time.Minute*time.Duration(chatRelayLimits.EventIPLimiterInterval),
 			chatRelayLimits.EventIPLimiterMaxTokens,
@@ -197,7 +197,7 @@ func initRelays(ctx context.Context) {
 	)
 
 	chatRelay.RejectConnection = append(chatRelay.RejectConnection,
-		policies.ConnectionRateLimiter(
+		connectionRateLimiter(
 			chatRelayLimits.ConnectionRateLimiterTokensPerInterval,
 			time.Minute*time.Duration(chatRelayLimits.ConnectionRateLimiterInterval),
 			chatRelayLimits.ConnectionRateLimiterMaxTokens,
@@ -250,7 +250,7 @@ func initRelays(ctx context.Context) {
 
 	outboxRelay.RejectEvent = append(outboxRelay.RejectEvent,
 		policies.RejectEventsWithBase64Media,
-		policies.EventIPRateLimiter(
+		eventIPRateLimiter(
 			outboxRelayLimits.EventIPLimiterTokensPerInterval,
 			time.Minute*time.Duration(outboxRelayLimits.EventIPLimiterInterval),
 			outboxRelayLimits.EventIPLimiterMaxTokens,
@@ -259,7 +259,7 @@ func initRelays(ctx context.Context) {
 	)
 
 	outboxRelay.RejectConnection = append(outboxRelay.RejectConnection,
-		policies.ConnectionRateLimiter(
+		connectionRateLimiter(
 			outboxRelayLimits.ConnectionRateLimiterTokensPerInterval,
 			time.Minute*time.Duration(outboxRelayLimits.ConnectionRateLimiterInterval),
 			outboxRelayLimits.ConnectionRateLimiterMaxTokens,
@@ -344,7 +344,7 @@ func initRelays(ctx context.Context) {
 
 	inboxRelay.RejectEvent = append(inboxRelay.RejectEvent,
 		policies.RejectEventsWithBase64Media,
-		policies.EventIPRateLimiter(
+		eventIPRateLimiter(
 			inboxRelayLimits.EventIPLimiterTokensPerInterval,
 			time.Minute*time.Duration(inboxRelayLimits.EventIPLimiterInterval),
 			inboxRelayLimits.EventIPLimiterMaxTokens,
@@ -356,7 +356,7 @@ func initRelays(ctx context.Context) {
 	)
 
 	inboxRelay.RejectConnection = append(inboxRelay.RejectConnection,
-		policies.ConnectionRateLimiter(
+		connectionRateLimiter(
 			inboxRelayLimits.ConnectionRateLimiterTokensPerInterval,
 			time.Minute*time.Duration(inboxRelayLimits.ConnectionRateLimiterInterval),
 			inboxRelayLimits.ConnectionRateLimiterMaxTokens,
