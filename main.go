@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/fiatjaf/khatru"
 	"github.com/nbd-wtf/go-nostr"
@@ -76,22 +77,31 @@ func main() {
 	log.Println("👥 Number of whitelisted pubkeys:", len(config.WhitelistedPubKeys))
 	log.Println("🚷 Number of blacklisted pubkeys:", len(config.BlacklistedPubKeys))
 
-	ensureImportRelays()
-	wotModel := wot.NewSimpleInMemory(
-		pool,
-		config.WhitelistedPubKeys,
-		config.ImportSeedRelays,
-		config.WotDepth,
-		config.WotMinimumFollowers,
-		config.WotFetchTimeoutSeconds,
-	)
-	wot.Initialize(mainCtx, wotModel)
+	log.Println("🛰️ Relays:", strings.Join(enabledRelayNames(), ", "))
+
+	// Only the chat and inbox relays reach out to public relays: for the web of
+	// trust, and to pull in events that tag whitelisted pubkeys.
+	usesPublicRelays := config.Relays["chat"] || config.Relays["inbox"]
+	if usesPublicRelays {
+		ensureImportRelays()
+		wotModel := wot.NewSimpleInMemory(
+			pool,
+			config.WhitelistedPubKeys,
+			config.ImportSeedRelays,
+			config.WotDepth,
+			config.WotMinimumFollowers,
+			config.WotFetchTimeoutSeconds,
+		)
+		wot.Initialize(mainCtx, wotModel)
+	}
 	initRelays(mainCtx)
 
 	go func() {
-		go subscribeInboxAndChat(mainCtx)
+		if usesPublicRelays {
+			go subscribeInboxAndChat(mainCtx)
+			go wot.PeriodicRefresh(mainCtx, config.WotRefreshInterval)
+		}
 		go startPeriodicCloudBackups(mainCtx)
-		go wot.PeriodicRefresh(mainCtx, config.WotRefreshInterval)
 	}()
 
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("templates/static"))))
@@ -121,24 +131,38 @@ func printHelp() {
 	fmt.Println("run 'haven [command] --help' for more information on a command.")
 }
 
-func dynamicRelayHandler(w http.ResponseWriter, r *http.Request) {
-	var relay *khatru.Relay
-	relayType := r.URL.Path
-
-	switch relayType {
+// relayForPath names the relay a request is for. Everything that isn't another
+// relay's path belongs to the outbox relay, including its Blossom routes.
+func relayForPath(path string) (string, *khatru.Relay) {
+	switch path {
 	case "/private":
-		relay = privateRelay
+		return "private", privateRelay
 	case "/chat":
-		relay = chatRelay
+		return "chat", chatRelay
 	case "/inbox":
-		relay = inboxRelay
-	case "":
-		relay = outboxRelay
+		return "inbox", inboxRelay
 	default:
-		relay = outboxRelay
+		return "outbox", outboxRelay
 	}
+}
 
+func dynamicRelayHandler(w http.ResponseWriter, r *http.Request) {
+	name, relay := relayForPath(r.URL.Path)
+	if !config.Relays[name] {
+		http.NotFound(w, r)
+		return
+	}
 	relay.ServeHTTP(w, r)
+}
+
+func enabledRelayNames() []string {
+	var names []string
+	for _, name := range relayNames {
+		if config.Relays[name] {
+			names = append(names, name)
+		}
+	}
+	return names
 }
 
 func getLogLevelFromConfig() slog.Level {

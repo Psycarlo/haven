@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"runtime/debug"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -68,6 +69,7 @@ type Config struct {
 	BlastrRelays                         []string            `json:"blastr_relays"`
 	BlastrTimeoutSeconds                 int                 `json:"blastr_timeout_seconds"`
 	S3Config                             *S3Config           `json:"s3_config"`
+	Relays                               map[string]bool     `json:"relays"`
 }
 
 const relaySoftware = "https://github.com/barrydeen/haven"
@@ -125,6 +127,7 @@ func loadConfig() Config {
 		BlastrRelays:                         getRelayListFromFile(getEnv("BLASTR_RELAYS_FILE")),
 		BlastrTimeoutSeconds:                 getEnvInt("BLASTR_TIMEOUT_SECONDS", 5),
 		S3Config:                             getS3Config(),
+		Relays:                               getEnabledRelays(),
 	}
 
 	// Relay owner is always whitelisted
@@ -140,6 +143,29 @@ func getVersion() string {
 		return "(devel)"
 	}
 	return info.Main.Version
+}
+
+var relayNames = []string{"private", "chat", "inbox", "outbox"}
+
+// getEnabledRelays reads RELAYS, a comma-separated list of the relays to run.
+// All of them run when it's empty or unset.
+func getEnabledRelays() map[string]bool {
+	enabled := map[string]bool{}
+	value := strings.TrimSpace(getEnvString("RELAYS", ""))
+	if value == "" {
+		for _, name := range relayNames {
+			enabled[name] = true
+		}
+		return enabled
+	}
+	for _, name := range strings.Split(value, ",") {
+		name = strings.ToLower(strings.TrimSpace(name))
+		if !slices.Contains(relayNames, name) {
+			log.Fatalf("Unknown relay %q in RELAYS. Use any of: %s", name, strings.Join(relayNames, ", "))
+		}
+		enabled[name] = true
+	}
+	return enabled
 }
 
 func getS3Config() *S3Config {
