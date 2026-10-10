@@ -105,6 +105,7 @@ func main() {
 		go watchPubkeyLists(mainCtx, config.ListsReloadInterval)
 	}()
 
+	http.Handle("GET /health", healthHandler(privateDB))
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("templates/static"))))
 	http.HandleFunc("/", dynamicRelayHandler)
 

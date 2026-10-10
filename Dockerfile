@@ -11,7 +11,7 @@ RUN CGO_ENABLED=1 go build -trimpath -ldflags "-s -w" -o /out/haven .
 
 FROM debian:bookworm-slim
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates \
+  && apt-get install -y --no-install-recommends ca-certificates curl \
   && rm -rf /var/lib/apt/lists/* \
   && useradd --system --uid 1000 --user-group --home-dir /app --no-create-home haven
 WORKDIR /app
@@ -24,4 +24,5 @@ ENV IMPORT_SEED_RELAYS_FILE=relays_import.json \
   BLASTR_RELAYS_FILE=relays_blastr.json
 VOLUME ["/app/db", "/app/blossom"]
 EXPOSE 3355
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s   CMD curl -fsS "http://localhost:${RELAY_PORT:-3355}/health" || exit 1
 ENTRYPOINT ["docker-entrypoint.sh", "./haven"]

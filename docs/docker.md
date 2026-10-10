@@ -18,6 +18,8 @@ docker run -d --name haven -p 3355:3355 \
 - **Relay lists** for imports and blasting default to the examples. Mount your own and point `IMPORT_SEED_RELAYS_FILE` and `BLASTR_RELAYS_FILE` at them.
 - **Commands** go after the image name: `docker run --rm --env-file .env -v haven-db:/app/db haven backup`.
 
+`GET /health` answers `ok` once the private database answers a query, and the image's health check uses it.
+
 The relay runs as the unprivileged user `haven` (uid 1000). The container starts as root only to hand that user the data folders, so volumes written by an image that ran as root keep working.
 
 ---
