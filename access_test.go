@@ -153,3 +153,34 @@ func TestPrivateLiveEventsOnlyReachWhitelistedReaders(t *testing.T) {
 		t.Error("a client that never logged in got the live event")
 	}
 }
+
+func (c *testClient) count(t *testing.T) int64 {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	count, _, err := c.relay.Count(ctx, nostr.Filters{{Kinds: []int{nostr.KindTextNote}}})
+	if err != nil {
+		t.Fatalf("count: %v", err)
+	}
+	return count
+}
+
+func TestPrivateCountsOnlyForWhitelistedReaders(t *testing.T) {
+	url := newPrivateTestRelay(t)
+	memberSecret, memberPubkey := newKey(t)
+	outsiderSecret, _ := newKey(t)
+	whitelist(t, memberPubkey)
+
+	member := connect(t, url, memberSecret)
+	member.publish(t, "private note")
+
+	if got := member.count(t); got != 1 {
+		t.Errorf("a whitelisted reader counted %d notes, want 1", got)
+	}
+	if got := connect(t, url, outsiderSecret).count(t); got != 0 {
+		t.Errorf("a key that isn't whitelisted counted %d notes", got)
+	}
+	if got := connect(t, url, "").count(t); got != 0 {
+		t.Errorf("a client that never logged in counted %d notes", got)
+	}
+}
