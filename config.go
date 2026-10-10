@@ -8,6 +8,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -72,7 +73,12 @@ type Config struct {
 const relaySoftware = "https://github.com/barrydeen/haven"
 
 func loadConfig() Config {
-	_ = godotenv.Load(".env")
+	envFile := ".env"
+	if testing.Testing() {
+		// Tests run with a fixed environment, never the relay's own .env.
+		envFile = "testdata/test.env"
+	}
+	_ = godotenv.Load(envFile)
 
 	cfg := Config{
 		OwnerNpub:                            getEnv("OWNER_NPUB"),
