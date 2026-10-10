@@ -1,0 +1,12 @@
+# Only what the image builds from. Never local data, keys or settings.
+.env
+.idea
+.DS_Store
+db
+db.zip
+blossom
+dist
+haven
+haven_backup.zip
+*.json
+!*.example.json

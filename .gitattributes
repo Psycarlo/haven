@@ -1,0 +1,2 @@
+# The entrypoint runs in Linux images, whatever system checked it out.
+*.sh text eol=lf
