@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"maps"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -54,8 +55,11 @@ func newKey(t *testing.T) (string, string) {
 
 func whitelist(t *testing.T, pubkey string) {
 	t.Helper()
-	config.WhitelistedPubKeys[pubkey] = struct{}{}
-	t.Cleanup(func() { delete(config.WhitelistedPubKeys, pubkey) })
+	previous := config.WhitelistedPubKeys.Set()
+	keys := maps.Clone(previous)
+	keys[pubkey] = struct{}{}
+	config.WhitelistedPubKeys.replace(keys)
+	t.Cleanup(func() { config.WhitelistedPubKeys.replace(maps.Clone(previous)) })
 }
 
 // connect opens a connection, logged in as the key when one is given.

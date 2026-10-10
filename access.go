@@ -28,8 +28,7 @@ func chatAccess(rl *khatru.Relay) {
 }
 
 func notWhitelistedToRead(ws *khatru.WebSocket, _ *nostr.Event) bool {
-	_, ok := config.WhitelistedPubKeys[ws.AuthedPublicKey]
-	return !ok
+	return !config.WhitelistedPubKeys.Has(ws.AuthedPublicKey)
 }
 
 func notInWotToRead(ws *khatru.WebSocket, _ *nostr.Event) bool {

@@ -11,7 +11,7 @@ import (
 
 func MustBeWhitelistedToQuery(ctx context.Context, _ nostr.Filter) (bool, string) {
 	authenticatedUser := khatru.GetAuthed(ctx)
-	if _, ok := config.WhitelistedPubKeys[authenticatedUser]; !ok {
+	if !config.WhitelistedPubKeys.Has(authenticatedUser) {
 		slog.Debug("🚫 query rejected: user is not whitelisted", "user", authenticatedUser)
 		return true, "restricted: you must be whitelisted to query this relay"
 	}
@@ -29,14 +29,14 @@ func MustBeInWotToQuery(ctx context.Context, _ nostr.Filter) (bool, string) {
 
 func MustBeWhitelistedToPost(ctx context.Context, event *nostr.Event) (bool, string) {
 	// Event from a whitelisted pubkey can always be posted, even if the user is not authenticated
-	if _, ok := config.WhitelistedPubKeys[event.PubKey]; ok {
+	if config.WhitelistedPubKeys.Has(event.PubKey) {
 		return false, ""
 	}
 	authenticatedUser := khatru.GetAuthed(ctx)
 	if authenticatedUser == "" {
 		return true, "auth-required: you must be authenticated to post to this relay"
 	}
-	if _, ok := config.WhitelistedPubKeys[authenticatedUser]; !ok {
+	if !config.WhitelistedPubKeys.Has(authenticatedUser) {
 		slog.Debug("🚫 event rejected: user is not whitelisted", "event", event.ID, "pubkey", authenticatedUser)
 		return true, "restricted: you must be whitelisted to post to this relay"
 	}
@@ -61,7 +61,7 @@ func MustBeInWotToPost(ctx context.Context, event *nostr.Event) (bool, string) {
 
 func MustNotBeBlacklistedToPost(ctx context.Context, event *nostr.Event) (bool, string) {
 	// Events from a blacklisted pubkey ARE always rejected
-	if _, ok := config.BlacklistedPubKeys[event.PubKey]; ok {
+	if config.BlacklistedPubKeys.Has(event.PubKey) {
 		slog.Debug("🚫 event rejected: event author is blacklisted", "event", event.ID, "pubkey", event.PubKey)
 		return true, "you are blacklisted from this relay"
 	}
@@ -70,7 +70,7 @@ func MustNotBeBlacklistedToPost(ctx context.Context, event *nostr.Event) (bool, 
 	if authenticatedUser == "" {
 		return true, "auth-required: you must be authenticated to post to this relay"
 	}
-	if _, ok := config.BlacklistedPubKeys[authenticatedUser]; ok {
+	if config.BlacklistedPubKeys.Has(authenticatedUser) {
 		slog.Debug("🚫 event rejected: authenticated user is blacklisted", "event", event.ID, "pubkey", authenticatedUser)
 		return true, "you are blacklisted from this relay"
 	}
@@ -127,7 +127,7 @@ func MustTagWhitelistedPubKey(_ context.Context, event *nostr.Event) (bool, stri
 		if len(tag) < 2 {
 			continue
 		}
-		if _, ok := config.WhitelistedPubKeys[tag[1]]; ok {
+		if config.WhitelistedPubKeys.Has(tag[1]) {
 			return false, ""
 		}
 	}

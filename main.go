@@ -74,8 +74,8 @@ func main() {
 
 	log.Println("🚀 HAVEN", config.RelayVersion, "is booting up")
 	defer log.Println("🔌 HAVEN is shutting down")
-	log.Println("👥 Number of whitelisted pubkeys:", len(config.WhitelistedPubKeys))
-	log.Println("🚷 Number of blacklisted pubkeys:", len(config.BlacklistedPubKeys))
+	log.Println("👥 Number of whitelisted pubkeys:", config.WhitelistedPubKeys.Len())
+	log.Println("🚷 Number of blacklisted pubkeys:", config.BlacklistedPubKeys.Len())
 
 	log.Println("🛰️ Relays:", strings.Join(enabledRelayNames(), ", "))
 
@@ -86,7 +86,7 @@ func main() {
 		ensureImportRelays()
 		wotModel := wot.NewSimpleInMemory(
 			pool,
-			config.WhitelistedPubKeys,
+			config.WhitelistedPubKeys.Set,
 			config.ImportSeedRelays,
 			config.WotDepth,
 			config.WotMinimumFollowers,
@@ -102,6 +102,7 @@ func main() {
 			go wot.PeriodicRefresh(mainCtx, config.WotRefreshInterval)
 		}
 		go startPeriodicCloudBackups(mainCtx)
+		go watchPubkeyLists(mainCtx, config.ListsReloadInterval)
 	}()
 
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("templates/static"))))

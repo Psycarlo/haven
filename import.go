@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
-	"maps"
 	"os"
-	"slices"
 	"time"
 
 	"github.com/fiatjaf/eventstore"
@@ -56,7 +54,7 @@ func runImport(ctx context.Context) {
 	initDBs()
 	wotModel := wot.NewSimpleInMemory(
 		pool,
-		config.WhitelistedPubKeys,
+		config.WhitelistedPubKeys.Set,
 		config.ImportSeedRelays,
 		config.WotDepth,
 		config.WotMinimumFollowers,
@@ -86,7 +84,7 @@ func importOwnerNotes(ctx context.Context) {
 		endTimestamp := nostr.Timestamp(endTime.Unix())
 
 		filter := nostr.Filter{
-			Authors: slices.Collect(maps.Keys(config.WhitelistedPubKeys)),
+			Authors: config.WhitelistedPubKeys.List(),
 			Since:   &startTimestamp,
 			Until:   &endTimestamp,
 		}
@@ -104,7 +102,7 @@ func importOwnerNotes(ctx context.Context) {
 				if ctx.Err() != nil {
 					break // Stop the loop on timeout
 				}
-				if _, ok := config.BlacklistedPubKeys[ev.PubKey]; ok {
+				if config.BlacklistedPubKeys.Has(ev.PubKey) {
 					slog.Debug("🚫 skipping event from blacklisted pubkey", "pubkey", ev.PubKey, "id", ev.ID)
 					continue
 				}
@@ -156,7 +154,7 @@ func importTaggedNotes(ctx context.Context) {
 	wdbChat := eventstore.RelayWrapper{Store: chatDB}
 	filter := nostr.Filter{
 		Tags: nostr.TagMap{
-			"p": slices.Collect(maps.Keys(config.WhitelistedPubKeys)),
+			"p": config.WhitelistedPubKeys.List(),
 		},
 	}
 
@@ -169,7 +167,7 @@ func importTaggedNotes(ctx context.Context) {
 				break // Stop the loop on timeout
 			}
 
-			if _, ok := config.BlacklistedPubKeys[ev.PubKey]; ok {
+			if config.BlacklistedPubKeys.Has(ev.PubKey) {
 				slog.Debug("🚫 skipping tagged event from blacklisted pubkey", "pubkey", ev.PubKey, "id", ev.ID)
 				continue
 			}
@@ -181,7 +179,7 @@ func importTaggedNotes(ctx context.Context) {
 				if len(tag) < 2 {
 					continue
 				}
-				if _, ok := config.WhitelistedPubKeys[tag[1]]; ok {
+				if config.WhitelistedPubKeys.Has(tag[1]) {
 					dbToWrite := wdbInbox
 					if ev.Kind == nostr.KindGiftWrap {
 						dbToWrite = wdbChat
@@ -212,7 +210,7 @@ func subscribeInboxAndChat(ctx context.Context) {
 	startTime := nostr.Timestamp(time.Now().Add(-time.Minute * 5).Unix())
 	filter := nostr.Filter{
 		Tags: nostr.TagMap{
-			"p": slices.Collect(maps.Keys(config.WhitelistedPubKeys)),
+			"p": config.WhitelistedPubKeys.List(),
 		},
 		Since: &startTime,
 	}
@@ -220,7 +218,7 @@ func subscribeInboxAndChat(ctx context.Context) {
 	log.Println("📢 subscribing to inbox")
 
 	for ev := range pool.SubscribeMany(ctx, config.ImportSeedRelays, filter) {
-		if _, ok := config.BlacklistedPubKeys[ev.PubKey]; ok {
+		if config.BlacklistedPubKeys.Has(ev.PubKey) {
 			slog.Debug("🚫discarding imported note from blacklisted pubkey", "pubkey", ev.PubKey, "id", ev.ID)
 			continue
 		}
@@ -231,7 +229,7 @@ func subscribeInboxAndChat(ctx context.Context) {
 			if len(tag) < 2 {
 				continue
 			}
-			if _, ok := config.WhitelistedPubKeys[tag[1]]; ok {
+			if config.WhitelistedPubKeys.Has(tag[1]) {
 				dbToPublish := wdbInbox
 				if ev.Kind == nostr.KindGiftWrap {
 					dbToPublish = wdbChat

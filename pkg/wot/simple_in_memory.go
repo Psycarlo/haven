@@ -21,14 +21,14 @@ type SimpleInMemory struct {
 
 	// Dependencies for Refresh
 	Pool               *nostr.SimplePool
-	WhitelistedPubKeys map[string]struct{}
+	WhitelistedPubKeys func() map[string]struct{}
 	SeedRelays         []string
 	WotDepth           int
 	MinFollowers       int
 	WotFetchTimeout    int
 }
 
-func NewSimpleInMemory(pool *nostr.SimplePool, whitelistedPubKeys map[string]struct{}, seedRelays []string, wotDepth int, minFollowers int, wotFetchTimeout int) *SimpleInMemory {
+func NewSimpleInMemory(pool *nostr.SimplePool, whitelistedPubKeys func() map[string]struct{}, seedRelays []string, wotDepth int, minFollowers int, wotFetchTimeout int) *SimpleInMemory {
 	return &SimpleInMemory{
 		Pool:               pool,
 		WhitelistedPubKeys: whitelistedPubKeys,
@@ -82,7 +82,7 @@ func (wt *SimpleInMemory) Refresh(ctx context.Context) {
 	newWot := make(map[string]bool)
 
 	if wt.WotDepth >= 1 {
-		for pubkey := range wt.WhitelistedPubKeys {
+		for pubkey := range wt.WhitelistedPubKeys() {
 			newWot[pubkey] = true
 		}
 	}
@@ -97,7 +97,7 @@ func (wt *SimpleInMemory) Refresh(ctx context.Context) {
 	defer cancel()
 
 	filter := nostr.Filter{
-		Authors: slices.Collect(maps.Keys(wt.WhitelistedPubKeys)),
+		Authors: slices.Collect(maps.Keys(wt.WhitelistedPubKeys())),
 		Kinds:   []int{nostr.KindFollowList},
 	}
 

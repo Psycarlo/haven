@@ -14,7 +14,7 @@ docker run -d --name haven -p 3355:3355 \
 
 - **Settings** come from the environment, as in [.env.example](../.env.example). The image holds no `.env`, so a missing required setting stops the relay at startup instead of falling back to an example value.
 - **Data** lives in `/app/db` (the databases) and `/app/blossom` (media). Put both on volumes, or every new container starts empty.
-- **Whitelist and blacklist** files are mounted wherever `WHITELISTED_NPUBS_FILE` and `BLACKLISTED_NPUBS_FILE` point, relative to `/app`.
+- **Whitelist and blacklist** files are mounted wherever `WHITELISTED_NPUBS_FILE` and `BLACKLISTED_NPUBS_FILE` point, relative to `/app`. Changes apply within `LISTS_RELOAD_INTERVAL`, without a restart, as long as the container sees them: many editors save by replacing the file, which a single-file mount doesn't follow, so mount the folder that holds the lists instead.
 - **Relay lists** for imports and blasting default to the examples. Mount your own and point `IMPORT_SEED_RELAYS_FILE` and `BLASTR_RELAYS_FILE` at them.
 - **Commands** go after the image name: `docker run --rm --env-file .env -v haven-db:/app/db haven backup`.
 

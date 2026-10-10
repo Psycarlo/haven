@@ -139,10 +139,8 @@ func eventKeyOrIPRateLimiter(
 	byKey := newRateLimiter(keyTokensPerInterval, keyInterval, keyMaxTokens)
 	byIP := eventIPRateLimiter(ipTokensPerInterval, ipInterval, ipMaxTokens)
 	return func(ctx context.Context, event *nostr.Event) (bool, string) {
-		if user := khatru.GetAuthed(ctx); user != "" {
-			if _, ok := config.WhitelistedPubKeys[user]; ok {
-				return byKey(user), "rate-limited: slow down, please"
-			}
+		if user := khatru.GetAuthed(ctx); user != "" && config.WhitelistedPubKeys.Has(user) {
+			return byKey(user), "rate-limited: slow down, please"
 		}
 		return byIP(ctx, event)
 	}
