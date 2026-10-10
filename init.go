@@ -123,7 +123,10 @@ func initRelays(ctx context.Context) {
 
 	privateRelay.RejectEvent = append(privateRelay.RejectEvent,
 		policies.RejectEventsWithBase64Media,
-		eventIPRateLimiter(
+		eventKeyOrIPRateLimiter(
+			privateRelayLimits.EventKeyLimiterTokensPerInterval,
+			time.Minute*time.Duration(privateRelayLimits.EventKeyLimiterInterval),
+			privateRelayLimits.EventKeyLimiterMaxTokens,
 			privateRelayLimits.EventIPLimiterTokensPerInterval,
 			time.Minute*time.Duration(privateRelayLimits.EventIPLimiterInterval),
 			privateRelayLimits.EventIPLimiterMaxTokens,

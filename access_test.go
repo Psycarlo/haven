@@ -12,8 +12,8 @@ import (
 	"github.com/nbd-wtf/go-nostr"
 )
 
-// A relay set up like /private, on an in-memory store.
-func newPrivateTestRelay(t *testing.T) string {
+// A relay set up like /private, on an in-memory store, with any extra setup.
+func newPrivateTestRelay(t *testing.T, setup ...func(*khatru.Relay)) string {
 	t.Helper()
 	store := &slicestore.SliceStore{}
 	if err := store.Init(); err != nil {
@@ -28,6 +28,9 @@ func newPrivateTestRelay(t *testing.T) string {
 	rl.OnConnect = append(rl.OnConnect, khatru.RequestAuth)
 	rl.RejectEvent = append(rl.RejectEvent, MustBeWhitelistedToPost)
 	privateAccess(rl)
+	for _, apply := range setup {
+		apply(rl)
+	}
 
 	server := httptest.NewServer(rl)
 	t.Cleanup(server.Close)
@@ -84,16 +87,23 @@ func connect(t *testing.T, url, secret string) *testClient {
 
 func (c *testClient) publish(t *testing.T, content string) nostr.Event {
 	t.Helper()
+	event, err := c.send(t, content)
+	if err != nil {
+		t.Fatalf("publish: %v", err)
+	}
+	return event
+}
+
+// send publishes a text note signed with the client's key and returns the relay's answer.
+func (c *testClient) send(t *testing.T, content string) (nostr.Event, error) {
+	t.Helper()
 	event := nostr.Event{CreatedAt: nostr.Now(), Kind: nostr.KindTextNote, Content: content}
 	if err := event.Sign(c.secret); err != nil {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := c.relay.Publish(ctx, event); err != nil {
-		t.Fatalf("publish: %v", err)
-	}
-	return event
+	return event, c.relay.Publish(ctx, event)
 }
 
 // live subscribes to new text notes only, as clients do with "limit": 0.

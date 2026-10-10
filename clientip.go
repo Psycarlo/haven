@@ -129,6 +129,25 @@ func eventIPRateLimiter(tokensPerInterval int, interval time.Duration, maxTokens
 	}
 }
 
+// eventKeyOrIPRateLimiter limits events per key for clients logged in with a
+// whitelisted key, so people behind one address don't share a limit. Everyone
+// else is limited per address.
+func eventKeyOrIPRateLimiter(
+	keyTokensPerInterval int, keyInterval time.Duration, keyMaxTokens int,
+	ipTokensPerInterval int, ipInterval time.Duration, ipMaxTokens int,
+) func(ctx context.Context, event *nostr.Event) (bool, string) {
+	byKey := newRateLimiter(keyTokensPerInterval, keyInterval, keyMaxTokens)
+	byIP := eventIPRateLimiter(ipTokensPerInterval, ipInterval, ipMaxTokens)
+	return func(ctx context.Context, event *nostr.Event) (bool, string) {
+		if user := khatru.GetAuthed(ctx); user != "" {
+			if _, ok := config.WhitelistedPubKeys[user]; ok {
+				return byKey(user), "rate-limited: slow down, please"
+			}
+		}
+		return byIP(ctx, event)
+	}
+}
+
 // connectionRateLimiter limits how many connections each client address may open.
 func connectionRateLimiter(tokensPerInterval int, interval time.Duration, maxTokens int) func(r *http.Request) bool {
 	limited := newRateLimiter(tokensPerInterval, interval, maxTokens)

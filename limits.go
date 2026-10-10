@@ -16,6 +16,9 @@ type PrivateRelayLimits struct {
 	EventIPLimiterTokensPerInterval        int
 	EventIPLimiterInterval                 int
 	EventIPLimiterMaxTokens                int
+	EventKeyLimiterTokensPerInterval       int
+	EventKeyLimiterInterval                int
+	EventKeyLimiterMaxTokens               int
 	AllowEmptyFilters                      bool
 	AllowComplexFilters                    bool
 	ConnectionRateLimiterTokensPerInterval int
@@ -61,6 +64,9 @@ func initRelayLimits() {
 		EventIPLimiterTokensPerInterval:        getEnvInt("PRIVATE_RELAY_EVENT_IP_LIMITER_TOKENS_PER_INTERVAL", 50),
 		EventIPLimiterInterval:                 getEnvInt("PRIVATE_RELAY_EVENT_IP_LIMITER_INTERVAL", 1),
 		EventIPLimiterMaxTokens:                getEnvInt("PRIVATE_RELAY_EVENT_IP_LIMITER_MAX_TOKENS", 100),
+		EventKeyLimiterTokensPerInterval:       getEnvInt("PRIVATE_RELAY_EVENT_KEY_LIMITER_TOKENS_PER_INTERVAL", 300),
+		EventKeyLimiterInterval:                getEnvInt("PRIVATE_RELAY_EVENT_KEY_LIMITER_INTERVAL", 1),
+		EventKeyLimiterMaxTokens:               getEnvInt("PRIVATE_RELAY_EVENT_KEY_LIMITER_MAX_TOKENS", 1000),
 		AllowEmptyFilters:                      getEnvBool("PRIVATE_RELAY_ALLOW_EMPTY_FILTERS", true),
 		AllowComplexFilters:                    getEnvBool("PRIVATE_RELAY_ALLOW_COMPLEX_FILTERS", true),
 		ConnectionRateLimiterTokensPerInterval: getEnvInt("PRIVATE_RELAY_CONNECTION_RATE_LIMITER_TOKENS_PER_INTERVAL", 3),
