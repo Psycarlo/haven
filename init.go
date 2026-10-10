@@ -119,7 +119,7 @@ func initRelays(ctx context.Context) {
 	if !privateRelayLimits.AllowComplexFilters {
 		privateRelay.RejectFilter = append(privateRelay.RejectFilter, policies.NoComplexFilters)
 	}
-	privateRelay.RejectFilter = append(privateRelay.RejectFilter, policies.MustAuth, MustBeWhitelistedToQuery)
+	privateAccess(privateRelay)
 
 	privateRelay.RejectEvent = append(privateRelay.RejectEvent,
 		policies.RejectEventsWithBase64Media,
@@ -182,7 +182,7 @@ func initRelays(ctx context.Context) {
 	if !chatRelayLimits.AllowComplexFilters {
 		chatRelay.RejectFilter = append(chatRelay.RejectFilter, policies.NoComplexFilters)
 	}
-	chatRelay.RejectFilter = append(chatRelay.RejectFilter, policies.MustAuth, MustBeInWotToQuery)
+	chatAccess(chatRelay)
 
 	chatRelay.RejectEvent = append(chatRelay.RejectEvent,
 		policies.RejectEventsWithBase64Media,
