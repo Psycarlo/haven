@@ -1,5 +1,18 @@
 # HAVEN
 
+> [!NOTE]
+> **This is a fork** of [barrydeen/haven](https://github.com/barrydeen/haven), kept close to it, that runs the team relay behind
+> [Freehub](https://github.com/Psycarlo/freehub). It adds, on top of Haven v1.2.2:
+>
+> - **Fixes:** live events and COUNT on `/private` and `/chat` only reach clients allowed to read them, and rate limits use the
+>   real client address, believing `X-Forwarded-For` only from `TRUSTED_PROXIES`.
+> - `RELAYS`, to run only some of the four relays: `RELAYS=private` for a team relay.
+> - Rate limits per logged-in key on `/private` (`PRIVATE_RELAY_EVENT_KEY_LIMITER_*`), so people behind one address don't share one.
+> - Whitelist and blacklist changes apply without a restart (`LISTS_RELOAD_INTERVAL`).
+> - `GET /health`, a [Docker image](docs/docker.md) published for each tag as `ghcr.io/psycarlo/haven`, and tests run on every push.
+>
+> Problems with these changes belong in this repository's issues, not upstream's.
+
 [![Go version](https://img.shields.io/github/go-mod/go-version/barrydeen/haven?logo=go)](./go.mod#L3)
 [![GitHub Release](https://img.shields.io/github/v/release/barrydeen/haven?link=https%3A%2F%2Fgithub.com%2Fbarrydeen%2Fhaven%2Freleases%2Flatest)](https://github.com/barrydeen/haven/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
