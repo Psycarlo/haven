@@ -22,6 +22,25 @@ docker run -d --name haven -p 3355:3355 \
 
 The relay runs as the unprivileged user `haven` (uid 1000). The container starts as root only to hand that user the data folders, so volumes written by an image that ran as root keep working.
 
+## Updating a relay on Coolify
+
+[deploy/coolify-update.sh](../deploy/coolify-update.sh) moves a relay that Coolify runs from an inline Dockerfile to another
+image, run on the server as root:
+
+```bash
+export COOLIFY_APP=<application uuid> COOLIFY_TOKEN=<API token with write and deploy rights>
+./coolify-update.sh --rehearse ghcr.io/psycarlo/haven:<tag>   # every check, on a copy; the relay keeps running
+./coolify-update.sh ghcr.io/psycarlo/haven:<tag>              # the update
+```
+
+The update stops the relay, saves its database folder, and has both the running image and the new one export every database
+from their own copy. Only when the two exports are identical does it set the Dockerfile to `FROM <image>` and deploy. If the new
+relay doesn't become healthy, `--rollback <run folder>` puts the previous Dockerfile back. Each run's backups stay in
+`/root/haven-backups/<time>`; the last ten runs are kept.
+
+It also turns on Coolify's consistent container name, so Coolify stops the old container before starting the new one. Both
+database engines allow one process at a time, so the default rolling update, which starts the new container first, can't work.
+
 ---
 
 [README](../README.md)
