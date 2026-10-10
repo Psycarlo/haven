@@ -34,8 +34,10 @@ export COOLIFY_APP=<application uuid> COOLIFY_TOKEN=<API token with write and de
 ```
 
 The update stops the relay, saves its database folder, and has both the running image and the new one export every database
-from their own copy. Only when the two exports are identical does it set the Dockerfile to `FROM <image>` and deploy. If the new
-relay doesn't become healthy, `--rollback <run folder>` puts the previous Dockerfile back. Each run's backups stay in
+from their own copy. Only when the two exports are identical does it set the Dockerfile to `FROM <image>` and deploy; Coolify's
+API can't change an inline Dockerfile, so it's saved through Coolify's own model, in the `coolify` container. If anything fails
+before the deploy, the relay is started again as it was. If the new relay doesn't become healthy, `--rollback <run folder>` puts
+the previous Dockerfile back. Each run's backups stay in
 `/root/haven-backups/<time>`; the last ten runs are kept.
 
 It also turns on Coolify's consistent container name, so Coolify stops the old container before starting the new one. Both

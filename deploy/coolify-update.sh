@@ -18,17 +18,23 @@
 #   COOLIFY_APP    the application's uuid (required)
 #   COOLIFY_TOKEN  an API token with write and deploy rights (required)
 #   COOLIFY_API    default http://localhost:8000/api/v1
+#   COOLIFY_CONTAINER  Coolify's own container, default coolify
 #   BACKUP_DIR     default /root/haven-backups
 #   KEEP           runs to keep, default 10
 set -euo pipefail
 
 COOLIFY_API="${COOLIFY_API:-http://localhost:8000/api/v1}"
+COOLIFY_CONTAINER="${COOLIFY_CONTAINER:-coolify}"
 BACKUP_DIR="${BACKUP_DIR:-/root/haven-backups}"
 KEEP="${KEEP:-10}"
 HELPER_IMAGE="debian:bookworm-slim"
 
 say() { printf '%s %s\n' "$(date +%H:%M:%S)" "$*"; }
 fail() { say "FAILED: $*" >&2; exit 1; }
+
+# Set once the relay is stopped, cleared once the new image is deploying: a
+# failure in between starts the relay again, unchanged.
+STOPPED=""
 
 api() {
   local method=$1 path=$2 body=${3:-}
@@ -71,20 +77,37 @@ wait_until_healthy() {
   return 1
 }
 
+# Coolify's API doesn't change an inline Dockerfile, so it's saved through
+# Coolify's own model, as its web interface does.
+set_dockerfile() {
+  local saved
+  # shellcheck disable=SC2016 # PHP, not shell
+  saved=$(docker exec -e APP_UUID="$COOLIFY_APP" -e DOCKERFILE="$(printf '%s' "$1" | base64 -w0)" \
+    "$COOLIFY_CONTAINER" php artisan tinker --execute '
+      $app = App\Models\Application::where("uuid", getenv("APP_UUID"))->firstOrFail();
+      $app->dockerfile = base64_decode(getenv("DOCKERFILE"));
+      $app->save();
+      echo $app->fresh()->dockerfile;')
+  [ "$saved" = "$1" ] || fail "Coolify didn't save the Dockerfile"
+}
+
 deploy_dockerfile() {
-  local dockerfile=$1
-  local body
-  body=$(python3 -c 'import json,sys; print(json.dumps({"dockerfile": sys.argv[1], "is_consistent_container_name_enabled": True}))' "$dockerfile")
-  api PATCH "/applications/${COOLIFY_APP}" "$body" >/dev/null
+  set_dockerfile "$1"
+  api PATCH "/applications/${COOLIFY_APP}" '{"is_consistent_container_name_enabled": true}' >/dev/null
   api POST "/applications/${COOLIFY_APP}/start" >/dev/null
 }
 
 # Runs `haven backup` with an image on a copy of the data, writing <name>.zip to the run folder.
 export_with() {
   local image=$1 volume=$2 name=$3
-  local command=(backup -o "/out/${name}.zip")
+  local command=(backup -o "/out/${name}.zip") entrypoint
+  # Fetched again right before use: the server's image cleanup may have removed it.
+  if ! docker image inspect "$image" >/dev/null 2>&1; then
+    docker pull -q "$image" >/dev/null || fail "can't get ${image}"
+  fi
+  entrypoint=$(docker image inspect -f '{{json .Config.Entrypoint}}' "$image") || fail "can't inspect ${image}"
   # Images whose entrypoint starts the relay take the command's arguments only.
-  if ! docker inspect -f '{{json .Config.Entrypoint}}' "$image" | grep -q 'haven'; then
+  if ! grep -q 'haven' <<<"$entrypoint"; then
     command=(./haven "${command[@]}")
   fi
   docker run --rm --env-file "$RUN/env" "${BINDS[@]}" \
@@ -118,6 +141,10 @@ PY
 }
 
 cleanup() {
+  if [ -n "$STOPPED" ]; then
+    say "starting the relay again, as it was"
+    api POST "/applications/${COOLIFY_APP}/start" >/dev/null || say "couldn't start it: start it in Coolify"
+  fi
   for volume in "${TEMP_VOLUMES[@]:-}"; do
     if [ -n "$volume" ]; then
       docker volume rm -f "$volume" >/dev/null 2>&1 || true
@@ -180,6 +207,7 @@ main() {
   if [ "$mode" = deploy ]; then
     say "stopping the relay"
     api POST "/applications/${COOLIFY_APP}/stop" >/dev/null
+    STOPPED=yes
     wait_until_stopped
     say "backing up the stopped database"
     docker run --rm -v "${volume}:/data:ro" -v "$RUN:/backup" "$HELPER_IMAGE" \
@@ -206,10 +234,6 @@ main() {
 
   say "comparing the exports"
   if ! compare_exports; then
-    if [ "$mode" = deploy ]; then
-      say "the new image doesn't read the same data: starting the old one again"
-      api POST "/applications/${COOLIFY_APP}/start" >/dev/null
-    fi
     fail "exports differ; nothing was deployed"
   fi
 
@@ -220,6 +244,7 @@ main() {
 
   say "deploying $image"
   deploy_dockerfile "FROM ${image}"
+  STOPPED=""
   local id
   if ! id=$(wait_until_healthy "$image"); then
     fail "the new relay isn't healthy after 5 minutes. To go back: $0 --rollback $RUN"
